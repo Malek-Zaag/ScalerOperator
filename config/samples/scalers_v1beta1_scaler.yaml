@@ -1,0 +1,17 @@
+apiVersion: scalers.localhost.io/v1beta1
+kind: Scaler
+metadata:
+  labels:
+    app.kubernetes.io/name: scaler
+    app.kubernetes.io/instance: scaler-sample
+    app.kubernetes.io/part-of: scaleroperator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: scaleroperator
+  name: scaler-sample
+spec:
+  start: 21
+  end: 23
+  replicas: 4 
+  deployments: 
+    - name:  nginx
+      namespace: default
