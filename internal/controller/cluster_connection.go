@@ -1,15 +1,26 @@
 package controller
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	metrics "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
 func cluster_connect() (*rest.Config, error) {
-	client, err := clientcmd.BuildConfigFromFlags("", "/mnt/c/Users/mk/.kube/config")
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Printf("error getting user home dir: %v\n", err)
+		os.Exit(1)
+	}
+	kubeConfigPath := filepath.Join(userHomeDir, ".kube", "config")
+	fmt.Println(kubeConfigPath)
+	client, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 
 	if err != nil {
 		panic(err.Error())
@@ -22,5 +33,14 @@ func get_metrics(client *rest.Config) {
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Print(metrics)
+	podMetrics, err := metrics.MetricsV1beta1().PodMetricses("default").List(context.TODO(), v1.ListOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+	for _, item := range podMetrics.Items {
+		fmt.Printf("pod name is %s\n", item.GetName())
+		fmt.Printf("pod namesapce is %s\n", item.GetNamespace())
+		fmt.Printf("pod cpu usage is %d\n", item.Containers[0].Usage.Cpu().MilliValue())
+		fmt.Printf("pod memory usage is %d\n", item.Containers[0].Usage.Memory().Value()/(1024*1024))
+	}
 }
