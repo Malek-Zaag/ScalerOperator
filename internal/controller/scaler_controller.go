@@ -23,14 +23,14 @@ type ScalerReconciler struct {
 }
 
 func (r *ScalerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := logger.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
+	log := logger.WithValues("Request Namespace", req.Namespace, "Request Name", req.Name)
 	log.Info("Reconcile loop starting")
-	// TODO(user): your logic here
 	scaler := &scalersv1beta1.Scaler{}
 	err := r.Get(ctx, req.NamespacedName, scaler)
 	if err != nil {
 		return ctrl.Result{}, nil
 	}
+	// conenct to cluster and watch for metrics
 	connection, err := cluster_connect()
 	if err != nil {
 		panic(err.Error())
@@ -38,9 +38,10 @@ func (r *ScalerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	podMetrics := get_metrics(connection)
 	_ = podMetrics
 	replicas := scaler.Spec.Replicas
-	for _, i := range podMetrics {
-		if (i.GetName()) == scaler.Spec.Deployments[0].Name && (i.GetNamespace()) == scaler.Spec.Deployments[0].Namespace {
-			if (i.Containers[0].Usage.Cpu().MilliValue() > 50) || ((i.Containers[0].Usage.Memory().Value() / (1024 * 1024)) > 200) {
+	for _, podMetric := range podMetrics {
+		// check the pod name is the same as the deployment requested in the Scaler resource def
+		if (podMetric.GetName()) == scaler.Spec.Deployments[0].Name && (podMetric.GetNamespace()) == scaler.Spec.Deployments[0].Namespace {
+			if (podMetric.Containers[0].Usage.Cpu().MilliValue() > 50) || ((podMetric.Containers[0].Usage.Memory().Value() / (1024 * 1024)) > 200) {
 				dep := &v1.Deployment{}
 				err := r.Get(ctx, types.NamespacedName{
 					Namespace: scaler.Spec.Deployments[0].Namespace,
@@ -71,7 +72,6 @@ func (r *ScalerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	// startTime := scaler.Spec.Start
 	// endTime := scaler.Spec.End
-
 	// currentHour := time.Now().UTC().Hour()
 	// fmt.Printf("The current hour is %d \n", currentHour)
 	// if currentHour >= startTime && currentHour <= endTime {
