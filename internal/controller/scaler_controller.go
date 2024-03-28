@@ -9,6 +9,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,6 +39,14 @@ func (r *ScalerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	podMetrics := get_metrics(connection)
 	_ = podMetrics
 	replicas := scaler.Spec.Replicas
+	err1 := r.ScaleOnOverload(scaler, podMetrics, replicas, ctx)
+	if err1 != nil {
+		return ctrl.Result{}, err1
+	}
+	return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
+}
+
+func (r *ScalerReconciler) ScaleOnOverload(scaler *scalersv1beta1.Scaler, podMetrics []v1beta1.PodMetrics, replicas int32, ctx context.Context) error {
 	for _, podMetric := range podMetrics {
 		// check the pod name is the same as the deployment requested in the Scaler resource def
 		if (podMetric.GetName()) == scaler.Spec.Deployments[0].Name && (podMetric.GetNamespace()) == scaler.Spec.Deployments[0].Namespace {
@@ -48,20 +57,19 @@ func (r *ScalerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 					Name:      scaler.Spec.Deployments[0].Name,
 				}, dep)
 				if err != nil {
-					return ctrl.Result{}, err
+					return err
 				}
 				dep.Spec.Replicas = &replicas
 				error := r.Update(ctx, dep)
 				if error != nil {
 					scaler.Status.Status = scalersv1beta1.FAILED
-					return ctrl.Result{}, err
+					return err
 				}
 				scaler.Status.Status = scalersv1beta1.SUCCESS
 				error = r.Status().Update(ctx, scaler)
 				if error != nil {
-					return ctrl.Result{}, err
+					return err
 				}
-
 			} else {
 				logger.Info("all your pods are working fine, no overload is happening")
 			}
@@ -69,38 +77,7 @@ func (r *ScalerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			logger.Error(errors.New("your deployment cannot be found"), "your deployment cannot be found")
 		}
 	}
-
-	// startTime := scaler.Spec.Start
-	// endTime := scaler.Spec.End
-	// currentHour := time.Now().UTC().Hour()
-	// fmt.Printf("The current hour is %d \n", currentHour)
-	// if currentHour >= startTime && currentHour <= endTime {
-	// 	fmt.Println("We are here")
-	// 	for _, deploy := range scaler.Spec.Deployments {
-	// 		dep := &v1.Deployment{}
-	// 		err := r.Get(ctx, types.NamespacedName{
-	// 			Namespace: deploy.Namespace,
-	// 			Name:      deploy.Name,
-	// 		}, dep)
-	// 		if err != nil {
-	// 			return ctrl.Result{}, err
-	// 		}
-	// 		if dep.Spec.Replicas != &replicas {
-	// 			dep.Spec.Replicas = &replicas
-	// 			err := r.Update(ctx, dep)
-	// 			if err != nil {
-	// 				scaler.Status.Status = scalersv1beta1.FAILED
-	// 				return ctrl.Result{}, err
-	// 			}
-	// 			scaler.Status.Status = scalersv1beta1.SUCCESS
-	// 			err = r.Status().Update(ctx, scaler)
-	// 			if err != nil {
-	// 				return ctrl.Result{}, err
-	// 			}
-	// 		}
-	// 	}
-	// }
-	return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
+	return nil
 }
 
 func (r *ScalerReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -108,3 +85,34 @@ func (r *ScalerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&scalersv1beta1.Scaler{}).
 		Complete(r)
 }
+
+// startTime := scaler.Spec.Start
+// endTime := scaler.Spec.End
+// currentHour := time.Now().UTC().Hour()
+// fmt.Printf("The current hour is %d \n", currentHour)
+// if currentHour >= startTime && currentHour <= endTime {
+// 	fmt.Println("We are here")
+// 	for _, deploy := range scaler.Spec.Deployments {
+// 		dep := &v1.Deployment{}
+// 		err := r.Get(ctx, types.NamespacedName{
+// 			Namespace: deploy.Namespace,
+// 			Name:      deploy.Name,
+// 		}, dep)
+// 		if err != nil {
+// 			return ctrl.Result{}, err
+// 		}
+// 		if dep.Spec.Replicas != &replicas {
+// 			dep.Spec.Replicas = &replicas
+// 			err := r.Update(ctx, dep)
+// 			if err != nil {
+// 				scaler.Status.Status = scalersv1beta1.FAILED
+// 				return ctrl.Result{}, err
+// 			}
+// 			scaler.Status.Status = scalersv1beta1.SUCCESS
+// 			err = r.Status().Update(ctx, scaler)
+// 			if err != nil {
+// 				return ctrl.Result{}, err
+// 			}
+// 		}
+// 	}
+// }
