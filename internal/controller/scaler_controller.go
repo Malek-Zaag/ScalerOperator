@@ -2,20 +2,19 @@ package controller
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	scalersv1beta1 "github.com/Malek-Zaag/ScalerOperator/api/v1beta1"
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/metrics/pkg/apis/metrics"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var logger = log.Log.WithName("controller_scaler")
+var logger = log.Log.WithName("OPERATOR LOGGER")
 
 // ScalerReconciler reconciles a Scaler object
 type ScalerReconciler struct {
@@ -25,7 +24,7 @@ type ScalerReconciler struct {
 
 func (r *ScalerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logger.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
-	log.Info("Reconcile loop")
+	log.Info("Reconcile loop starting")
 	// TODO(user): your logic here
 	scaler := &scalersv1beta1.Scaler{}
 	err := r.Get(ctx, req.NamespacedName, scaler)
@@ -36,41 +35,72 @@ func (r *ScalerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	if err != nil {
 		panic(err.Error())
 	}
-	get_metrics(connection)
-	startTime := scaler.Spec.Start
-	endTime := scaler.Spec.End
+	podMetrics := get_metrics(connection)
+	_ = podMetrics
 	replicas := scaler.Spec.Replicas
-	fmt.Print(metrics.GroupName)
-	_ = replicas
-	currentHour := time.Now().UTC().Hour()
-	fmt.Printf("The current hour is %d \n", currentHour)
-	if currentHour >= startTime && currentHour <= endTime {
-		fmt.Println("We are here")
-		for _, deploy := range scaler.Spec.Deployments {
-			dep := &v1.Deployment{}
-			err := r.Get(ctx, types.NamespacedName{
-				Namespace: deploy.Namespace,
-				Name:      deploy.Name,
-			}, dep)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-			if dep.Spec.Replicas != &replicas {
-				dep.Spec.Replicas = &replicas
-				err := r.Update(ctx, dep)
+	for _, i := range podMetrics {
+		if (i.GetName()) == scaler.Spec.Deployments[0].Name && (i.GetNamespace()) == scaler.Spec.Deployments[0].Namespace {
+			if (i.Containers[0].Usage.Cpu().MilliValue() > 50) || ((i.Containers[0].Usage.Memory().Value() / (1024 * 1024)) > 200) {
+				dep := &v1.Deployment{}
+				err := r.Get(ctx, types.NamespacedName{
+					Namespace: scaler.Spec.Deployments[0].Namespace,
+					Name:      scaler.Spec.Deployments[0].Name,
+				}, dep)
 				if err != nil {
+					return ctrl.Result{}, err
+				}
+				dep.Spec.Replicas = &replicas
+				error := r.Update(ctx, dep)
+				if error != nil {
 					scaler.Status.Status = scalersv1beta1.FAILED
 					return ctrl.Result{}, err
 				}
 				scaler.Status.Status = scalersv1beta1.SUCCESS
-				err = r.Status().Update(ctx, scaler)
-				if err != nil {
+				error = r.Status().Update(ctx, scaler)
+				if error != nil {
 					return ctrl.Result{}, err
 				}
+
+			} else {
+				logger.Info("all your pods are working fine, no overload is happening")
 			}
+		} else {
+			logger.Error(errors.New("your deployment cannot be found"), "your deployment cannot be found")
 		}
 	}
-	return ctrl.Result{}, nil
+
+	// startTime := scaler.Spec.Start
+	// endTime := scaler.Spec.End
+
+	// currentHour := time.Now().UTC().Hour()
+	// fmt.Printf("The current hour is %d \n", currentHour)
+	// if currentHour >= startTime && currentHour <= endTime {
+	// 	fmt.Println("We are here")
+	// 	for _, deploy := range scaler.Spec.Deployments {
+	// 		dep := &v1.Deployment{}
+	// 		err := r.Get(ctx, types.NamespacedName{
+	// 			Namespace: deploy.Namespace,
+	// 			Name:      deploy.Name,
+	// 		}, dep)
+	// 		if err != nil {
+	// 			return ctrl.Result{}, err
+	// 		}
+	// 		if dep.Spec.Replicas != &replicas {
+	// 			dep.Spec.Replicas = &replicas
+	// 			err := r.Update(ctx, dep)
+	// 			if err != nil {
+	// 				scaler.Status.Status = scalersv1beta1.FAILED
+	// 				return ctrl.Result{}, err
+	// 			}
+	// 			scaler.Status.Status = scalersv1beta1.SUCCESS
+	// 			err = r.Status().Update(ctx, scaler)
+	// 			if err != nil {
+	// 				return ctrl.Result{}, err
+	// 			}
+	// 		}
+	// 	}
+	// }
+	return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
 }
 
 func (r *ScalerReconciler) SetupWithManager(mgr ctrl.Manager) error {

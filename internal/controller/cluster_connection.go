@@ -9,6 +9,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	metrics "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
@@ -21,14 +22,13 @@ func cluster_connect() (*rest.Config, error) {
 	kubeConfigPath := filepath.Join(userHomeDir, ".kube", "config")
 	fmt.Println(kubeConfigPath)
 	client, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
-
 	if err != nil {
 		panic(err.Error())
 	}
 	return client, nil
 }
 
-func get_metrics(client *rest.Config) {
+func get_metrics(client *rest.Config) []v1beta1.PodMetrics {
 	metrics, err := metrics.NewForConfig(client)
 	if err != nil {
 		panic(err.Error())
@@ -37,10 +37,11 @@ func get_metrics(client *rest.Config) {
 	if err != nil {
 		panic(err.Error())
 	}
-	for _, item := range podMetrics.Items {
-		fmt.Printf("pod name is %s\n", item.GetName())
-		fmt.Printf("pod namesapce is %s\n", item.GetNamespace())
-		fmt.Printf("pod cpu usage is %d\n", item.Containers[0].Usage.Cpu().MilliValue())
-		fmt.Printf("pod memory usage is %d\n", item.Containers[0].Usage.Memory().Value()/(1024*1024))
-	}
+	// for _, item := range podMetrics.Items {
+	// 	fmt.Printf("pod name is %s\n", item.GetName())
+	// 	fmt.Printf("pod namesapce is %s\n", item.GetNamespace())
+	// 	fmt.Printf("pod cpu usage is %d\n", item.Containers[0].Usage.Cpu().MilliValue())
+	// 	fmt.Printf("pod memory usage is %d\n", item.Containers[0].Usage.Memory().Value()/(1024*1024))
+	// }
+	return podMetrics.Items
 }
