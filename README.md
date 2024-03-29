@@ -2,7 +2,24 @@
 // TODO(user): Add simple overview of use/purpose
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+
+Scaler Operator is a kubernetes operator that aims to scale your desired pods based on metrics that you can define using the custom resources manifest files. It's purpose is to replace the HPA (Horizontal Pod Autoscaler). I will be releasing in the upcoming releases more features (scaling in, maybe cost calculator, mutli-deployment scaling...).
+
+
+
+## How HPA works ?
+From the most basic perspective, the HorizontalPodAutoscaler controller operates on the ratio between desired metric value and current metric value:
+
+> **_NOTE:_** desiredReplicas = ceil[currentReplicas * ( currentMetricValue / desiredMetricValue )]
+
+For example, if the current metric value is 200m, and the desired value is 100m, the number of replicas will be doubled, since 200.0 / 100.0 == 2.0 If the current value is instead 50m, you'll halve the number of replicas, since 50.0 / 100.0 == 0.5. The control plane skips any scaling action if the ratio is sufficiently close to 1.0 (within a globally-configurable tolerance, 0.1 by default).
+
+## Reasons to use this operator
+- Runs as a pod inside Kubernetes itself.
+- Can survive being rescheduled without impacting function outside of being momentarily unavailable.
+- Uses more sophisticated control algorithms than just proportional control based on a single measurement.
+- Highly configurable.
+- Well tested.
 
 ## Getting Started
 
