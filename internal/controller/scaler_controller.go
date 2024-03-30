@@ -72,6 +72,26 @@ func (r *ScalerReconciler) ScaleOnOverload(scaler *scalersv1beta1.Scaler, podMet
 				}
 			} else {
 				logger.Info("all your pods are working fine, no overload is happening")
+				dep := &v1.Deployment{}
+				err := r.Get(ctx, types.NamespacedName{
+					Namespace: scaler.Spec.Deployments[0].Namespace,
+					Name:      scaler.Spec.Deployments[0].Name,
+				}, dep)
+				if err != nil {
+					return err
+				}
+				scale_in := int32(1)
+				dep.Spec.Replicas = &scale_in
+				error := r.Update(ctx, dep)
+				if error != nil {
+					scaler.Status.Status = scalersv1beta1.FAILED
+					return err
+				}
+				scaler.Status.Status = scalersv1beta1.SUCCESS
+				error = r.Status().Update(ctx, scaler)
+				if error != nil {
+					return err
+				}
 			}
 		} else {
 			logger.Error(errors.New("your deployment cannot be found"), "your deployment cannot be found")
