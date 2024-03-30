@@ -18,11 +18,10 @@ From the most basic perspective, the HorizontalPodAutoscaler controller operates
 For example, if the current metric value is 200m, and the desired value is 100m, the number of replicas will be doubled, since 200.0 / 100.0 == 2.0 If the current value is instead 50m, you'll halve the number of replicas, since 50.0 / 100.0 == 0.5. The control plane skips any scaling action if the ratio is sufficiently close to 1.0 (within a globally-configurable tolerance, 0.1 by default).
 
 ## Reasons to use this operator
-- Runs as a pod inside Kubernetes itself.
 - Can survive being rescheduled without impacting function outside of being momentarily unavailable.
 - Uses more sophisticated control algorithms than just proportional control based on a single measurement.
 - Highly configurable.
-- Well tested.
+- Well tested. (not sure)
 
 ## Getting Started
 
