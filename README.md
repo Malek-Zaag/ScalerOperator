@@ -1,7 +1,7 @@
 # SOperator
 
 <p align="center">
-    <img src="https://github.com/Malek-Zaag/ScalerOperator/assets/90960811/35cd3cc5-9b45-44e6-9d57-0a86022dfc7d" />
+    <img src="https://github.com/Malek-Zaag/ScalerOperator/assets/90960811/028abae9-2ee9-45db-95c9-96abe4d85d7a" />
 </p>
 
 ## Description
