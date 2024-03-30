@@ -1,4 +1,4 @@
-# SOperator
+# Scaler Operator
 
 <p align="center">
     <img src="https://github.com/Malek-Zaag/ScalerOperator/assets/90960811/028abae9-2ee9-45db-95c9-96abe4d85d7a" />
