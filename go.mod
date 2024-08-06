@@ -2,7 +2,7 @@ module github.com/Malek-Zaag/ScalerOperator
 
 go 1.22.0
 
-toolchain go1.22.5
+toolchain go1.22.6
 
 require (
 	github.com/onsi/ginkgo/v2 v2.19.0
