@@ -2,12 +2,12 @@ module github.com/Malek-Zaag/ScalerOperator
 
 go 1.23.0
 
-toolchain go1.24.3
+toolchain go1.26.3
 
 require (
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
-	k8s.io/api v0.32.3
+	k8s.io/api v0.36.1
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
 	k8s.io/metrics v0.32.3
